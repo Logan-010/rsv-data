@@ -1,0 +1,12 @@
+[package]
+name = "rsv-data"
+version = "0.1.0"
+edition = "2021"
+description = "RSV Encoding/Decoding"
+license = "MIT"
+documentation = "https://docs.rs/rsv-data"
+repository = "https://github.com/Logan-010/rsv-data"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
