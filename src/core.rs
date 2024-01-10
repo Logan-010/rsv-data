@@ -9,37 +9,34 @@
 //!];
 //!```
 
+pub const VALUE_TERMINATOR: u8 = 0xFF;
+pub const ROW_TERMINATOR: u8 = 0xFD;
+pub const NULL_VALUE: u8 = 0xFE;
+
 pub type Res<T> = Result<T, Box<dyn std::error::Error>>;
 
-pub fn encode_rsv(rows: &Vec<Vec<Option<String>>>) -> Vec<u8> {
-    let mut parts: Vec<&[u8]> = vec![];
-
-    for row in rows {
-        for value in row {
-            match value {
-                //Pushes byte for null data
-                None => parts.push(b"\xFE"),
-                //Pushes bytes for non null data
-                Some(str_value) => {
-                    if !str_value.is_empty() {
-                        parts.push(str_value.as_bytes());
-                    }
-                }
-            }
-
-            parts.push(b"\xFF");
-        }
-
-        parts.push(b"\xFD");
-    }
-
-    //Returns bianary data for RSV file
-    parts.concat()
+pub fn encode_rsv<T: ToString>(rows: &[Vec<Option<T>>]) -> Vec<u8> {
+    rows.iter().fold(vec![], |mut result, row| {
+        let mut row_bytes = row
+            .iter()
+            .map(|v| match v {
+                Some(t_value) => t_value.to_string().into_bytes(),
+                None => vec![NULL_VALUE],
+            })
+            .fold(vec![], |mut row_result, mut value_in_bytes| {
+                row_result.append(&mut value_in_bytes);
+                row_result.push(VALUE_TERMINATOR);
+                row_result
+            });
+        result.append(&mut row_bytes);
+        result.push(ROW_TERMINATOR);
+        result
+    })
 }
 
-pub fn decode_rsv(bytes: &Vec<u8>) -> Res<Vec<Vec<Option<String>>>> {
+pub fn decode_rsv(bytes: &[u8]) -> Res<Vec<Vec<Option<String>>>> {
     //Check for valid end charecter in RSV input
-    if !bytes.is_empty() && bytes[bytes.len() - 1] != 0xFD {
+    if !bytes.is_empty() && bytes.last() != Some(&ROW_TERMINATOR) {
         return Err("Incomplete RSV document".into());
     }
 
@@ -48,12 +45,12 @@ pub fn decode_rsv(bytes: &Vec<u8>) -> Res<Vec<Vec<Option<String>>>> {
     let mut value_start_index = 0;
 
     for i in 0..bytes.len() {
-        if bytes[i] == 0xFF {
+        if bytes[i] == VALUE_TERMINATOR {
             let length = i - value_start_index;
 
             if length == 0 {
                 current_row.push(Some(String::new()));
-            } else if length == 1 && bytes[value_start_index] == 0xFE {
+            } else if length == 1 && bytes[value_start_index] == NULL_VALUE {
                 current_row.push(None);
             } else {
                 let value_bytes = bytes[value_start_index..i].to_vec();
@@ -66,7 +63,7 @@ pub fn decode_rsv(bytes: &Vec<u8>) -> Res<Vec<Vec<Option<String>>>> {
             }
 
             value_start_index = i + 1;
-        } else if bytes[i] == 0xFD {
+        } else if bytes[i] == ROW_TERMINATOR {
             if i > 0 && value_start_index != i {
                 return Err("Incomplete RSV row".into());
             }
@@ -80,4 +77,3 @@ pub fn decode_rsv(bytes: &Vec<u8>) -> Res<Vec<Vec<Option<String>>>> {
     //Return table
     Ok(result)
 }
-

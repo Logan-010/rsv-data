@@ -6,7 +6,9 @@
 //!Heres some examples on how to use this:
 //!
 //!Open RSV file and assign some data to it
-//!```
+//!```no_run
+//!use rsv_data::Rsv;
+//!
 //!let mut data: Rsv = Rsv::open("myRsv.rsv").unwrap();
 //!data.set_data(vec![
 //!    vec![Some("Hello user".to_string()), None],
@@ -17,7 +19,9 @@
 //!```
 //!
 //!Create RSV file and assign some data to it
-//!```
+//!```no_run
+//!use rsv_data::Rsv;
+//!
 //!let mut data: Rsv = Rsv::create("myRsv.rsv").unwrap();
 //!data.set_data(vec![
 //!    vec![Some("Hello user".to_string()), None],
@@ -31,20 +35,23 @@ use std::io::{Read, Write};
 
 pub mod core;
 
-///Convience/Abstraction struct for RSV, allows opening, creating, saving, and retrieving data;
+///Convenience/Abstraction struct for RSV, allows opening, creating, saving, and retrieving data;
 pub struct Rsv {
     file: String,
     data: Vec<Vec<Option<String>>>,
 }
 
 impl Rsv {
-    pub fn create(file_name: &str) -> core::Res<()> {
+    pub fn create(file_name: &str) -> core::Res<Self> {
         let mut file = std::fs::File::create(file_name)?;
         //Adding valid end byte
         let byte = [0xFD];
         file.write_all(&byte)?;
 
-        Ok(())
+        Ok(Rsv {
+            file: file_name.to_owned(),
+            data: vec![],
+        })
     }
 
     pub fn open(file_name: &str) -> core::Res<Self> {
@@ -92,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_decode_error() {
-        let mut data = crate::core::encode_rsv(&vec![vec![None]]);
+        let mut data = crate::core::encode_rsv::<String>(&vec![vec![None]]);
         data.pop();
 
         if crate::core::decode_rsv(&data).is_ok() {
