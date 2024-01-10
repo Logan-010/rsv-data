@@ -14,10 +14,6 @@ in
       # (nixpkgs.rustChannelOf { rustToolchain = ./rust-toolchain; }).rust
       openssl
       pkg-config
-      nodejs
-      yarn
-      wasm-pack
-	  websocat
     ];
     shellHook = ''
       export RUST_BACKTRACE=1
